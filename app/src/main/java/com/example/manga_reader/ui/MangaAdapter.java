@@ -1,6 +1,7 @@
 package com.example.manga_reader.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import com.example.manga_reader.R;
 import com.example.manga_reader.data.models.MangaResponse;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.manga_reader.ui.ChaptersActivity;
 
 public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> {
 
@@ -39,20 +41,34 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MangaResponse manga = mangaList.get(position);
 
-        // Название
         String title = "Без названия";
         if (manga.getAttributes() != null &&
                 manga.getAttributes().getTitle() != null &&
-                manga.getAttributes().getTitle().getEnglishTitle() != null) {  // ← getEnglishTitle(), а не getEn()
+                manga.getAttributes().getTitle().getEnglishTitle() != null) {
             title = manga.getAttributes().getTitle().getEnglishTitle();
         }
         holder.textViewTitle.setText(title);
 
-        // Обложка (пока будет пусто, URL обложки мы добавим позже)
-        // Пока поставим placeholder
         Glide.with(context)
-                .load(R.drawable.ic_launcher_foreground) // временная заглушка
+                .load(R.drawable.ic_launcher_foreground)
                 .into(holder.imageViewCover);
+
+        holder.itemView.setOnClickListener(v -> {
+            MangaResponse clickedManga = mangaList.get(position);
+            String mangaId = clickedManga.getId();
+
+            String mangaTitle = "Без названия";
+            if (clickedManga.getAttributes() != null &&
+                    clickedManga.getAttributes().getTitle() != null &&
+                    clickedManga.getAttributes().getTitle().getEnglishTitle() != null) {
+                mangaTitle = clickedManga.getAttributes().getTitle().getEnglishTitle();
+            }
+
+            Intent intent = new Intent(context, ChaptersActivity.class);
+            intent.putExtra("MANGA_ID", mangaId);
+            intent.putExtra("MANGA_TITLE", mangaTitle);
+            context.startActivity(intent);
+        });
     }
 
     @Override
