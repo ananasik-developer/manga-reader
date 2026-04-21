@@ -1,6 +1,8 @@
 package com.example.manga_reader.ui;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,12 +16,14 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ChaptersActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private ChapterAdapter adapter;
     private TextView textViewTitle;
+    private ProgressBar progressBar;  // ← ВОТ ОБЪЯВЛЕНИЕ ПЕРЕМЕННОЙ
     private String mangaId;
     private String mangaTitle;
 
@@ -35,22 +39,36 @@ public class ChaptersActivity extends AppCompatActivity {
         textViewTitle = findViewById(R.id.textViewMangaTitle);
         textViewTitle.setText(mangaTitle != null ? mangaTitle : "Главы");
 
+        progressBar = findViewById(R.id.progressBar);  // ← ИНИЦИАЛИЗАЦИЯ
+
         recyclerView = findViewById(R.id.recyclerViewChapters);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new ChapterAdapter(this, new ArrayList<>());
         recyclerView.setAdapter(adapter);
 
+        // Загружаем главы
         loadChapters();
     }
 
     private void loadChapters() {
+        progressBar.setVisibility(View.VISIBLE);
+        recyclerView.setVisibility(View.GONE);
+
         MangaDexService service = ApiClient.getService();
-        Call<ChapterListResponse> call = service.getChapters(mangaId, "en", 100);
+        List<String> targetLanguages = new ArrayList<>();
+        targetLanguages.add("ru");
+        targetLanguages.add("en");
+
+        Call<ChapterListResponse> call = service.getChapters(mangaId, targetLanguages, 100, "asc");
 
         call.enqueue(new Callback<ChapterListResponse>() {
             @Override
             public void onResponse(Call<ChapterListResponse> call, Response<ChapterListResponse> response) {
+                // Скрываем прогресс-бар, показываем список
+                progressBar.setVisibility(View.GONE);
+                recyclerView.setVisibility(View.VISIBLE);
+
                 if (response.isSuccessful() && response.body() != null) {
                     adapter.setChapters(response.body().getData());
                     Toast.makeText(ChaptersActivity.this,
@@ -64,8 +82,10 @@ public class ChaptersActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<ChapterListResponse> call, Throwable t) {
+                progressBar.setVisibility(View.GONE);
+                recyclerView.setVisibility(View.VISIBLE);
                 Toast.makeText(ChaptersActivity.this,
-                        "Ошибка сети", Toast.LENGTH_SHORT).show();
+                        "Ошибка сети: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }

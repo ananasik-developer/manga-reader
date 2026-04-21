@@ -3,6 +3,9 @@ package com.example.manga_reader.data.api;
 import com.example.manga_reader.data.models.ChapterListResponse;
 import com.example.manga_reader.data.models.ChapterPagesResponse;
 import com.example.manga_reader.data.models.MangaListResponse;
+
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -18,10 +21,19 @@ public interface MangaDexService {
     @GET("manga/{id}/feed")
     Call<ChapterListResponse> getChapters(
             @Path("id") String mangaId,
-            @Query("translatedLanguage[]") String language,
-            @Query("limit") int limit
+            @Query("translatedLanguage[]") List<String> languages,
+            @Query("limit") int limit,
+            @Query("order[chapter]") String order
     );
 
     @GET("at-home/server/{chapterId}")
     Call<ChapterPagesResponse> getChapterPages(@Path("chapterId") String chapterId);
+
+    @GET("manga/{id}/feed")
+    Call<ChapterListResponse> getChapters(
+            @Path("id") String mangaId,
+            @Query("translatedLanguage[]") String language,
+            @Query("limit") int limit,
+            @Query("order[chapter]") String order // <- ВОТ ЭТО НУЖНО ДОБАВИТЬ
+    );
 }

@@ -23,14 +23,21 @@ public class MangaResponse {
         @SerializedName("description")
         private Description description;
 
-        public Title getTitle() { return title; }      // ← Геттер getTitle()
+        public Title getTitle() { return title; }
         public Description getDescription() { return description; }
 
-        public static class Title {
-            @SerializedName("en")
-            private String englishTitle;        // ← Поле englishTitle
-
-            public String getEnglishTitle() { return englishTitle; } // ← Геттер getEnglishTitle()
+        public static class Title extends java.util.LinkedHashMap<String, String> {
+            public String getAnyTitle() {
+                // Пробуем английский
+                if (containsKey("en")) return get("en");
+                // Пробуем японский (ромадзи)
+                if (containsKey("ja-ro")) return get("ja-ro");
+                // Пробуем русский (вдруг повезет)
+                if (containsKey("ru")) return get("ru");
+                // Иначе берем первое попавшееся значение
+                if (!isEmpty()) return values().iterator().next();
+                return "Без названия";
+            }
         }
 
         public static class Description {

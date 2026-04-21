@@ -41,14 +41,14 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MangaResponse manga = mangaList.get(position);
 
-        // Установка названия
         String title = "Без названия";
-        if (manga.getAttributes() != null &&
-                manga.getAttributes().getTitle() != null &&
-                manga.getAttributes().getTitle().getEnglishTitle() != null) {
-            title = manga.getAttributes().getTitle().getEnglishTitle();
+        if (manga.getAttributes() != null && manga.getAttributes().getTitle() != null) {
+            title = manga.getAttributes().getTitle().getAnyTitle();
         }
         holder.textViewTitle.setText(title);
+
+        String subtitle = "ID: " + manga.getId();
+        holder.textViewSubtitle.setText(subtitle);
 
         holder.itemView.setOnClickListener(v -> {
             MangaResponse clickedManga = mangaList.get(position);
@@ -56,9 +56,8 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
 
             String mangaTitle = "Без названия";
             if (clickedManga.getAttributes() != null &&
-                    clickedManga.getAttributes().getTitle() != null &&
-                    clickedManga.getAttributes().getTitle().getEnglishTitle() != null) {
-                mangaTitle = clickedManga.getAttributes().getTitle().getEnglishTitle();
+                    clickedManga.getAttributes().getTitle() != null) {
+                mangaTitle = clickedManga.getAttributes().getTitle().getAnyTitle();
             }
 
             Intent intent = new Intent(context, ChaptersActivity.class);
@@ -74,13 +73,13 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView imageViewCover;
         TextView textViewTitle;
+        TextView textViewSubtitle;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            imageViewCover = itemView.findViewById(R.id.imageViewCover);
             textViewTitle = itemView.findViewById(R.id.textViewTitle);
+            textViewSubtitle = itemView.findViewById(R.id.textViewSubtitle);
         }
     }
 }

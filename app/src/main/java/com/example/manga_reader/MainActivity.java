@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void searchManga(String title) {
         MangaDexService service = ApiClient.getService();
-        Call<MangaListResponse> call = service.searchManga(title, 20);
+        Call<MangaListResponse> call = service.searchManga(title, 50);
 
         call.enqueue(new Callback<MangaListResponse>() {
             @Override

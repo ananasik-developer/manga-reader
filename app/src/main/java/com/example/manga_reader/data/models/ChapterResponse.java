@@ -12,10 +12,12 @@ public class ChapterResponse {
         private String title;
         private String publishAt;
         private int pages;
+        private String language;
 
         public String getChapter() { return chapter; }
         public String getTitle() { return title; }
         public String getPublishAt() { return publishAt; }
         public int getPages() { return pages; }
+        public String getLanguage() { return language; }
     }
 }
