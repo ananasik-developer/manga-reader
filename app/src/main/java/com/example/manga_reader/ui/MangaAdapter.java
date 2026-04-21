@@ -41,6 +41,7 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MangaResponse manga = mangaList.get(position);
 
+        // Установка названия
         String title = "Без названия";
         if (manga.getAttributes() != null &&
                 manga.getAttributes().getTitle() != null &&
@@ -48,10 +49,6 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
             title = manga.getAttributes().getTitle().getEnglishTitle();
         }
         holder.textViewTitle.setText(title);
-
-        Glide.with(context)
-                .load(R.drawable.ic_launcher_foreground)
-                .into(holder.imageViewCover);
 
         holder.itemView.setOnClickListener(v -> {
             MangaResponse clickedManga = mangaList.get(position);

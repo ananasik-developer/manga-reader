@@ -14,6 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mangareader">
         <activity
+            android:name=".ui.ReaderActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.ChaptersActivity"
             android:exported="false" />
         <activity

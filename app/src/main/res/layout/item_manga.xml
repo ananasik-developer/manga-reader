@@ -7,30 +7,20 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/textViewTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:padding="16dp"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#000000" />
 
-        <ImageView
-            android:id="@+id/imageViewCover"
-            android:layout_width="80dp"
-            android:layout_height="120dp"
-            android:scaleType="centerCrop"
-            android:background="#E0E0E0" />
-
-        <TextView
-            android:id="@+id/textViewTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_gravity="center_vertical"
-            android:layout_marginStart="16dp"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#000000" />
-
-    </LinearLayout>
+    <ImageView
+        android:id="@+id/imageViewCover"
+        android:layout_width="80dp"
+        android:layout_height="120dp"
+        android:scaleType="centerCrop"
+        android:background="#E0E0E0" />
 
 </androidx.cardview.widget.CardView>

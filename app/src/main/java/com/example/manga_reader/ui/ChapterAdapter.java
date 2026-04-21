@@ -1,6 +1,7 @@
 package com.example.manga_reader.ui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.manga_reader.R;
 import com.example.manga_reader.data.models.ChapterResponse;
 import java.util.List;
+import com.example.manga_reader.ui.ReaderActivity;
 
 public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHolder> {
 
@@ -30,7 +32,7 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_chapter, parent, false);
         return new ViewHolder(view);
     }
 
@@ -50,12 +52,14 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
             mainText += ": " + title;
         }
 
-        holder.text1.setText(mainText);
-        holder.text2.setText("Страниц: " + pages);
+        holder.textTitle.setText(mainText);
+        holder.textInfo.setText("Страниц: " + pages + " • Язык: EN");
 
         holder.itemView.setOnClickListener(v -> {
             String chapterId = chapter.getId();
-            Toast.makeText(context, "ID главы: " + chapterId, Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(context, ReaderActivity.class);
+            intent.putExtra("CHAPTER_ID", chapterId);
+            context.startActivity(intent);
         });
     }
 
@@ -65,12 +69,12 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView text1, text2;
+        TextView textTitle, textInfo;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            text1 = itemView.findViewById(android.R.id.text1);
-            text2 = itemView.findViewById(android.R.id.text2);
+            textTitle = itemView.findViewById(R.id.textViewChapterTitle);
+            textInfo = itemView.findViewById(R.id.textViewChapterInfo);
         }
     }
 }
