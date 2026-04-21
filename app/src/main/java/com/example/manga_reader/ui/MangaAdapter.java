@@ -29,6 +29,13 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
         this.mangaList = list;
         notifyDataSetChanged();
     }
+    public List<MangaResponse> getMangaList() {
+        return mangaList;
+    }
+
+    public int getItemCount() {
+        return mangaList != null ? mangaList.size() : 0;
+    }
 
     @NonNull
     @Override
@@ -67,10 +74,6 @@ public class MangaAdapter extends RecyclerView.Adapter<MangaAdapter.ViewHolder> 
         });
     }
 
-    @Override
-    public int getItemCount() {
-        return mangaList.size();
-    }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView textViewTitle;

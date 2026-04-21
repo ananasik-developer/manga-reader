@@ -3,23 +3,41 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
     android:background="?android:attr/selectableItemBackground">
 
-    <TextView
-        android:id="@+id/textViewChapterTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#000000" />
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp">
 
-    <TextView
-        android:id="@+id/textViewChapterInfo"
+        <TextView
+            android:id="@+id/textViewChapterTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <TextView
+            android:id="@+id/textViewChapterInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+    <!-- Разделительная линия (неполная - с отступами слева) -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="#666666"
-        android:layout_marginTop="4dp" />
+        android:layout_height="1dp"
+        android:layout_marginStart="72dp"
+        android:layout_marginEnd="16dp"
+        android:background="?android:attr/listDivider"
+        android:alpha="0.3" />
 
 </LinearLayout>

@@ -43,7 +43,7 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
         String chapterNum = chapter.getAttributes().getChapter();
         String title = chapter.getAttributes().getTitle();
         int pages = chapter.getAttributes().getPages();
-        String language = chapter.getAttributes().getLanguage(); // Получаем язык
+        String language = chapter.getLanguage(); // Получаем язык
 
         String mainText = (chapterNum != null && !chapterNum.isEmpty())
                 ? "Глава " + chapterNum
@@ -64,13 +64,22 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
         });
     }
     private String getLanguageDisplay(String code) {
-        if (code == null) return "?";
-        switch (code) {
+        if (code == null) return "🌐";
+        switch (code.toLowerCase()) {
             case "ru": return "🇷🇺 RU";
             case "en": return "🇬🇧 EN";
+            case "gb": return "🇬🇧 EN";
+            case "us": return "🇺🇸 EN";
             case "ja": return "🇯🇵 JP";
+            case "ko": return "🇰🇷 KR";
             case "zh": return "🇨🇳 ZH";
-            default: return code.toUpperCase();
+            case "fr": return "🇫🇷 FR";
+            case "es": return "🇪🇸 ES";
+            case "pt": return "🇵🇹 PT";
+            case "br": return "🇧🇷 BR";
+            case "it": return "🇮🇹 IT";
+            case "de": return "🇩🇪 DE";
+            default: return "🌐 " + code.toUpperCase();
         }
     }
 
