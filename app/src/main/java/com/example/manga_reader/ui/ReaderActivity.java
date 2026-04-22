@@ -11,7 +11,6 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.core.view.WindowCompat;
@@ -58,7 +57,6 @@ public class ReaderActivity extends AppCompatActivity {
     private boolean isChapterMarkedAsRead = false;
     private String nextChapterId = null;
     private String nextChapterTitle = null;
-    private boolean nextChapterLoaded = false;
 
     private float startY;
     private float startX;
@@ -115,6 +113,18 @@ public class ReaderActivity extends AppCompatActivity {
                 updatePageIndicator(position);
                 checkIfLastPage(position);
             }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                super.onPageScrollStateChanged(state);
+                // Скрываем кнопку при начале скролла с последней страницы
+                if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
+                    int currentItem = viewPager.getCurrentItem();
+                    if (currentItem == fullUrls.size() - 1) {
+                        nextChapterPanel.setVisibility(View.GONE);
+                    }
+                }
+            }
         });
 
         verticalAdapter = new VerticalReaderAdapter(this, new ArrayList<>());
@@ -130,16 +140,28 @@ public class ReaderActivity extends AppCompatActivity {
                 LinearLayoutManager lm = (LinearLayoutManager) rv.getLayoutManager();
                 if (lm != null) {
                     int firstVisible = lm.findFirstVisibleItemPosition();
+                    int lastVisible = lm.findLastVisibleItemPosition();
+                    int totalItems = verticalAdapter.getItemCount();
+
                     if (firstVisible >= 0) {
                         currentPage = firstVisible;
                         updatePageIndicator(currentPage);
                     }
 
-                    int lastVisible = lm.findLastVisibleItemPosition();
-                    int totalItems = verticalAdapter.getItemCount();
+                    // Если ушли с последней страницы - скрываем кнопку
+                    if (lastVisible < totalItems - 1) {
+                        nextChapterPanel.setVisibility(View.GONE);
+                    }
+
+                    // Если дошли до последней страницы - проверяем
                     if (lastVisible >= totalItems - 1 && totalItems > 0) {
                         checkIfLastPage(totalItems - 1);
                     }
+                }
+
+                // Если скроллим вверх с последней страницы - скрываем кнопку
+                if (dy < 0 && currentPage == fullUrls.size() - 1) {
+                    nextChapterPanel.setVisibility(View.GONE);
                 }
             }
         });
@@ -194,8 +216,6 @@ public class ReaderActivity extends AppCompatActivity {
         nextChapterButton.setOnClickListener(v -> {
             if (nextChapterId != null && !nextChapterId.isEmpty()) {
                 loadNextChapter();
-            } else {
-                Toast.makeText(this, "Следующая глава не найдена", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -249,9 +269,10 @@ public class ReaderActivity extends AppCompatActivity {
             String text = (page + 1) + " / " + fullUrls.size();
             pageIndicator.setText(text);
 
-            // ПРИНУДИТЕЛЬНАЯ ПРОВЕРКА при обновлении индикатора
             if (page == fullUrls.size() - 1) {
                 checkIfLastPage(page);
+            } else {
+                nextChapterPanel.setVisibility(View.GONE);
             }
         }
     }
@@ -259,32 +280,15 @@ public class ReaderActivity extends AppCompatActivity {
     private void checkIfLastPage(int position) {
         if (fullUrls.isEmpty()) return;
 
-        // Логируем для отладки
-        android.util.Log.d("READER", "checkIfLastPage: position=" + position + ", total=" + fullUrls.size() + ", nextChapterId=" + nextChapterId);
-
         if (position == fullUrls.size() - 1) {
-            android.util.Log.d("READER", "LAST PAGE DETECTED!");
             markChapterAsRead();
 
-            // Пробуем показать кнопку сразу
-            showNextChapterButtonIfReady();
-
-            // И еще раз через 500мс на случай если ID еще не загрузился
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                showNextChapterButtonIfReady();
-            }, 500);
-        }
-    }
-
-    private void showNextChapterButtonIfReady() {
-        android.util.Log.d("READER", "showNextChapterButtonIfReady: nextChapterId=" + nextChapterId);
-
-        if (nextChapterId != null && !nextChapterId.isEmpty()) {
-            nextChapterPanel.setVisibility(View.VISIBLE);
-            nextChapterPanel.bringToFront();
-            android.util.Log.d("READER", "Button shown!");
+            if (nextChapterId != null && !nextChapterId.isEmpty()) {
+                nextChapterPanel.setVisibility(View.VISIBLE);
+                nextChapterPanel.bringToFront();
+            }
         } else {
-            android.util.Log.d("READER", "Button NOT shown - no nextChapterId");
+            nextChapterPanel.setVisibility(View.GONE);
         }
     }
 
@@ -298,39 +302,23 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void loadNextChapterInfo() {
-        if (mangaId == null || mangaId.isEmpty()) {
-            android.util.Log.e("READER", "mangaId is null or empty!");
-            return;
-        }
-
-        android.util.Log.d("READER", "Loading chapters for mangaId: " + mangaId + ", current chapterId: " + chapterId);
+        if (mangaId == null || mangaId.isEmpty()) return;
 
         MangaDexService s = ApiClient.getService();
         List<String> langs = new ArrayList<>();
         langs.add("ru");
         langs.add("en");
 
-        // Увеличиваем лимит до 500 на всякий случай
         s.getChapters(mangaId, langs, 500, "asc").enqueue(new Callback<ChapterListResponse>() {
             @Override
             public void onResponse(Call<ChapterListResponse> c, Response<ChapterListResponse> r) {
                 if (r.body() != null) {
                     List<ChapterResponse> chaps = r.body().getData();
-                    android.util.Log.d("READER", "Total chapters loaded: " + chaps.size());
-
-                    boolean foundCurrent = false;
 
                     for (int i = 0; i < chaps.size(); i++) {
                         ChapterResponse ch = chaps.get(i);
-                        String chId = ch.getId();
-                        String chNum = ch.getAttributes().getChapter();
 
-                        android.util.Log.d("READER", "Chapter " + i + ": id=" + chId + ", number=" + chNum);
-
-                        if (chId.equals(chapterId)) {
-                            foundCurrent = true;
-                            android.util.Log.d("READER", "FOUND current chapter at position " + i);
-
+                        if (ch.getId().equals(chapterId)) {
                             if (i + 1 < chaps.size()) {
                                 ChapterResponse next = chaps.get(i + 1);
                                 nextChapterId = next.getId();
@@ -347,34 +335,20 @@ public class ReaderActivity extends AppCompatActivity {
                                     nextChapterTitle += ": " + title;
                                 }
 
-                                android.util.Log.d("READER", "NEXT chapter found: id=" + nextChapterId + ", title=" + nextChapterTitle);
-
-                                // Если мы уже на последней странице, показываем кнопку
                                 if (!fullUrls.isEmpty() && currentPage == fullUrls.size() - 1) {
                                     runOnUiThread(() -> {
-                                        android.util.Log.d("READER", "Showing button from loadNextChapterInfo");
                                         nextChapterPanel.setVisibility(View.VISIBLE);
                                         nextChapterPanel.bringToFront();
                                     });
                                 }
-                            } else {
-                                android.util.Log.d("READER", "This is the LAST chapter (no next chapter)");
                             }
                             break;
                         }
                     }
-
-                    if (!foundCurrent) {
-                        android.util.Log.e("READER", "Current chapter NOT FOUND in the list!");
-                    }
-                } else {
-                    android.util.Log.e("READER", "Response body is null");
                 }
             }
             @Override
-            public void onFailure(Call<ChapterListResponse> c, Throwable t) {
-                android.util.Log.e("READER", "Failed to load chapters: " + t.getMessage());
-            }
+            public void onFailure(Call<ChapterListResponse> c, Throwable t) {}
         });
     }
 
@@ -386,8 +360,6 @@ public class ReaderActivity extends AppCompatActivity {
             intent.putExtra("CHAPTER_TITLE", nextChapterTitle);
             startActivity(intent);
             finish();
-        } else {
-            Toast.makeText(this, "Это последняя глава", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -407,7 +379,6 @@ public class ReaderActivity extends AppCompatActivity {
                     verticalAdapter.setImageUrls(new ArrayList<>(fullUrls));
                     updatePageIndicator(0);
 
-                    // Проверяем прочитана ли глава
                     SharedPreferences prefs = getSharedPreferences("manga_reader_prefs", MODE_PRIVATE);
                     Set<String> readChapters = prefs.getStringSet("read_chapters", new HashSet<>());
                     isChapterMarkedAsRead = readChapters.contains(chapterId);
@@ -415,14 +386,10 @@ public class ReaderActivity extends AppCompatActivity {
                     if (fullUrls.size() == 1) {
                         checkIfLastPage(0);
                     }
-                } else {
-                    Toast.makeText(ReaderActivity.this, "Ошибка загрузки страниц", Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
-            public void onFailure(Call<ChapterPagesResponse> c, Throwable t) {
-                Toast.makeText(ReaderActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
-            }
+            public void onFailure(Call<ChapterPagesResponse> c, Throwable t) {}
         });
     }
 }
