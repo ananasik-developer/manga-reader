@@ -3,6 +3,7 @@ package com.example.manga_reader.ui;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -47,6 +48,8 @@ public class ReaderActivity extends AppCompatActivity {
 
     // Для отслеживания свайпов
     private float startY;
+    private float startX;
+    private VelocityTracker velocityTracker;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -102,37 +105,17 @@ public class ReaderActivity extends AppCompatActivity {
 
         // Настройка RecyclerView для вертикального режима
         verticalAdapter = new VerticalReaderAdapter(this, new ArrayList<>());
-
-        // Создаем кастомный LinearLayoutManager с улучшенной инерцией
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this) {
-            @Override
-            public boolean canScrollVertically() {
-                return true;
-            }
-        };
-
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(verticalAdapter);
         recyclerView.setVisibility(View.GONE);
 
-        // ВАЖНО: Настройки для плавного скролла с инерцией
+        // Настройки для плавного скролла
         recyclerView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
         recyclerView.setNestedScrollingEnabled(true);
         recyclerView.setHasFixedSize(false);
-        recyclerView.setItemViewCacheSize(20);
-        recyclerView.setDrawingCacheEnabled(true);
-        recyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
 
-        // Увеличиваем скорость флинга через рефлексию
-        try {
-            java.lang.reflect.Field field = RecyclerView.class.getDeclaredField("mMaxFlingVelocity");
-            field.setAccessible(true);
-            field.set(recyclerView, 20000); // Увеличиваем максимальную скорость (стандарт 8000)
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Отслеживание скролла в вертикальном режиме
+        // Отслеживание скролла
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
@@ -148,35 +131,109 @@ public class ReaderActivity extends AppCompatActivity {
                     }
                 }
             }
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                // При скролле в вертикальном режиме НЕ показываем панель
+            }
         });
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupTouchListener() {
+        // Общий обработчик касаний
         View.OnTouchListener touchListener = (v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    startY = event.getY();
-                    v.performClick();
-                    break;
+            // Для ViewPager (горизонтальный режим)
+            if (v == viewPager) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getY();
+                        startX = event.getX();
+                        v.performClick();
+                        break;
 
-                case MotionEvent.ACTION_UP:
-                    float endY = event.getY();
-                    float diffY = endY - startY;
+                    case MotionEvent.ACTION_UP:
+                        float endY = event.getY();
+                        float endX = event.getX();
+                        float diffY = Math.abs(endY - startY);
+                        float diffX = Math.abs(endX - startX);
 
-                    if (Math.abs(diffY) > 150) {
-                        if (diffY > 0) {
-                            hidePanel();
-                        } else {
-                            showPanel();
+                        // Если это вертикальный свайп (не перелистывание страниц)
+                        if (diffY > 150 && diffY > diffX) {
+                            if (endY > startY) {
+                                // Свайп вниз - скрываем
+                                hidePanel();
+                            } else {
+                                // Свайп вверх - показываем
+                                showPanel();
+                            }
+                            return true;
+                        } else if (diffY < 50 && diffX < 50) {
+                            // Тап - переключаем видимость
+                            togglePanel();
                         }
-                        return true;
-                    } else if (Math.abs(diffY) < 50) {
-                        togglePanel();
-                    }
-                    v.performClick();
-                    break;
+                        v.performClick();
+                        break;
+                }
             }
+
+            // Для RecyclerView (вертикальный режим)
+            if (v == recyclerView) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getY();
+                        startX = event.getX();
+                        if (velocityTracker == null) {
+                            velocityTracker = VelocityTracker.obtain();
+                        } else {
+                            velocityTracker.clear();
+                        }
+                        velocityTracker.addMovement(event);
+                        v.performClick();
+                        return false;
+
+                    case MotionEvent.ACTION_MOVE:
+                        if (velocityTracker != null) {
+                            velocityTracker.addMovement(event);
+                        }
+                        return false;
+
+                    case MotionEvent.ACTION_UP:
+                        if (velocityTracker != null) {
+                            velocityTracker.addMovement(event);
+                            velocityTracker.computeCurrentVelocity(1000);
+
+                            float velocityY = velocityTracker.getYVelocity();
+                            float endY = event.getY();
+                            float endX = event.getX();
+                            float diffY = Math.abs(endY - startY);
+                            float diffX = Math.abs(endX - startX);
+
+                            // Если было быстрое движение (флинг) - панель НЕ показываем
+                            if (Math.abs(velocityY) > 1000 && diffY > 50) {
+                                // Это скролл с инерцией, ничего не делаем
+                            }
+                            // Только если это был явный тап без скролла
+                            else if (diffY < 30 && diffX < 30) {
+                                togglePanel();
+                            }
+
+                            velocityTracker.recycle();
+                            velocityTracker = null;
+                        }
+                        v.performClick();
+                        return false;
+
+                    case MotionEvent.ACTION_CANCEL:
+                        if (velocityTracker != null) {
+                            velocityTracker.recycle();
+                            velocityTracker = null;
+                        }
+                        return false;
+                }
+            }
+
             return false;
         };
 
