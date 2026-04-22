@@ -23,7 +23,7 @@ public class ChaptersActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private ChapterAdapter adapter;
     private TextView textViewTitle;
-    private ProgressBar progressBar;  // ← ВОТ ОБЪЯВЛЕНИЕ ПЕРЕМЕННОЙ
+    private ProgressBar progressBar;
     private String mangaId;
     private String mangaTitle;
 
@@ -32,22 +32,20 @@ public class ChaptersActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chapters);
 
-        // Получаем данные из Intent
         mangaId = getIntent().getStringExtra("MANGA_ID");
         mangaTitle = getIntent().getStringExtra("MANGA_TITLE");
 
         textViewTitle = findViewById(R.id.textViewMangaTitle);
         textViewTitle.setText(mangaTitle != null ? mangaTitle : "Главы");
 
-        progressBar = findViewById(R.id.progressBar);  // ← ИНИЦИАЛИЗАЦИЯ
-
+        progressBar = findViewById(R.id.progressBar);
         recyclerView = findViewById(R.id.recyclerViewChapters);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new ChapterAdapter(this, new ArrayList<>());
+        adapter.setMangaTitle(mangaTitle); // Передаем название манги в адаптер
         recyclerView.setAdapter(adapter);
 
-        // Загружаем главы
         loadChapters();
     }
 
@@ -65,7 +63,6 @@ public class ChaptersActivity extends AppCompatActivity {
         call.enqueue(new Callback<ChapterListResponse>() {
             @Override
             public void onResponse(Call<ChapterListResponse> call, Response<ChapterListResponse> response) {
-                // Скрываем прогресс-бар, показываем список
                 progressBar.setVisibility(View.GONE);
                 recyclerView.setVisibility(View.VISIBLE);
 

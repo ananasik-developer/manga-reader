@@ -6,22 +6,26 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.manga_reader.R;
 import com.example.manga_reader.data.models.ChapterResponse;
 import java.util.List;
-import com.example.manga_reader.ui.ReaderActivity;
 
 public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHolder> {
 
     private Context context;
     private List<ChapterResponse> chapters;
+    private String mangaTitle; // Добавляем поле для названия манги
 
     public ChapterAdapter(Context context, List<ChapterResponse> chapters) {
         this.context = context;
         this.chapters = chapters;
+    }
+
+    // Метод для установки названия манги
+    public void setMangaTitle(String mangaTitle) {
+        this.mangaTitle = mangaTitle;
     }
 
     public void setChapters(List<ChapterResponse> chapters) {
@@ -43,8 +47,9 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
         String chapterNum = chapter.getAttributes().getChapter();
         String title = chapter.getAttributes().getTitle();
         int pages = chapter.getAttributes().getPages();
-        String language = chapter.getLanguage(); // Получаем язык
+        String language = chapter.getLanguage();
 
+        // Формируем полное название главы для отображения
         String mainText = (chapterNum != null && !chapterNum.isEmpty())
                 ? "Глава " + chapterNum
                 : "Без номера";
@@ -52,17 +57,35 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
         if (title != null && !title.isEmpty()) {
             mainText += ": " + title;
         }
+
         String langDisplay = getLanguageDisplay(language);
         holder.textTitle.setText(mainText);
         holder.textInfo.setText("📄 " + pages + " • " + langDisplay);
 
         holder.itemView.setOnClickListener(v -> {
             String chapterId = chapter.getId();
+
+            // Формируем заголовок для ReaderActivity
+            StringBuilder chapterTitle = new StringBuilder();
+            if (mangaTitle != null && !mangaTitle.isEmpty()) {
+                chapterTitle.append(mangaTitle);
+            }
+            if (chapterNum != null && !chapterNum.isEmpty()) {
+                if (chapterTitle.length() > 0) chapterTitle.append(" - ");
+                chapterTitle.append("Гл. ").append(chapterNum);
+            }
+            if (title != null && !title.isEmpty()) {
+                if (chapterTitle.length() > 0) chapterTitle.append(": ");
+                chapterTitle.append(title);
+            }
+
             Intent intent = new Intent(context, ReaderActivity.class);
             intent.putExtra("CHAPTER_ID", chapterId);
+            intent.putExtra("CHAPTER_TITLE", chapterTitle.toString()); // Передаем название
             context.startActivity(intent);
         });
     }
+
     private String getLanguageDisplay(String code) {
         if (code == null) return "🌐";
         switch (code.toLowerCase()) {
