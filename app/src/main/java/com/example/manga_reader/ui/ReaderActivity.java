@@ -117,7 +117,6 @@ public class ReaderActivity extends AppCompatActivity {
             @Override
             public void onPageScrollStateChanged(int state) {
                 super.onPageScrollStateChanged(state);
-                // Скрываем кнопку при начале скролла с последней страницы
                 if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
                     int currentItem = viewPager.getCurrentItem();
                     if (currentItem == fullUrls.size() - 1) {
@@ -143,7 +142,8 @@ public class ReaderActivity extends AppCompatActivity {
                     int lastVisible = lm.findLastVisibleItemPosition();
                     int totalItems = verticalAdapter.getItemCount();
 
-                    if (firstVisible >= 0) {
+                    // ВАЖНО: используем firstVisible для номера страницы
+                    if (firstVisible >= 0 && firstVisible < totalItems) {
                         currentPage = firstVisible;
                         updatePageIndicator(currentPage);
                     }
@@ -162,6 +162,26 @@ public class ReaderActivity extends AppCompatActivity {
                 // Если скроллим вверх с последней страницы - скрываем кнопку
                 if (dy < 0 && currentPage == fullUrls.size() - 1) {
                     nextChapterPanel.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onScrollStateChanged(RecyclerView rv, int newState) {
+                super.onScrollStateChanged(rv, newState);
+                // Когда скролл остановился - проверяем ещё раз
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    LinearLayoutManager lm = (LinearLayoutManager) rv.getLayoutManager();
+                    if (lm != null) {
+                        int lastVisible = lm.findLastVisibleItemPosition();
+                        int totalItems = verticalAdapter.getItemCount();
+
+                        // Если последний элемент виден полностью - обновляем счётчик на последнюю страницу
+                        if (lastVisible == totalItems - 1) {
+                            currentPage = totalItems - 1;
+                            updatePageIndicator(currentPage);
+                            checkIfLastPage(totalItems - 1);
+                        }
+                    }
                 }
             }
         });
