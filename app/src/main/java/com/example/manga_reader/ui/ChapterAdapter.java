@@ -2,6 +2,7 @@ package com.example.manga_reader.ui;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,22 +11,28 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.manga_reader.R;
 import com.example.manga_reader.data.models.ChapterResponse;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHolder> {
 
     private Context context;
     private List<ChapterResponse> chapters;
-    private String mangaTitle; // Добавляем поле для названия манги
+    private String mangaTitle;
+    private String mangaId;
 
     public ChapterAdapter(Context context, List<ChapterResponse> chapters) {
         this.context = context;
         this.chapters = chapters;
     }
 
-    // Метод для установки названия манги
     public void setMangaTitle(String mangaTitle) {
         this.mangaTitle = mangaTitle;
+    }
+
+    public void setMangaId(String mangaId) {
+        this.mangaId = mangaId;
     }
 
     public void setChapters(List<ChapterResponse> chapters) {
@@ -62,6 +69,22 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
         holder.textTitle.setText(mainText);
         holder.textInfo.setText("📄 " + pages + " • " + langDisplay);
 
+        // Проверяем, прочитана ли глава
+        SharedPreferences prefs = context.getSharedPreferences("manga_reader_prefs", Context.MODE_PRIVATE);
+        Set<String> readChapters = prefs.getStringSet("read_chapters", new HashSet<>());
+
+        if (readChapters.contains(chapter.getId())) {
+            // Прочитанная глава - делаем серой
+            holder.textTitle.setTextColor(context.getResources().getColor(android.R.color.darker_gray));
+            holder.textInfo.setTextColor(context.getResources().getColor(android.R.color.darker_gray));
+            holder.itemView.setAlpha(0.7f);
+        } else {
+            // Непрочитанная глава - белая
+            holder.textTitle.setTextColor(context.getResources().getColor(android.R.color.white));
+            holder.textInfo.setTextColor(context.getResources().getColor(android.R.color.white));
+            holder.itemView.setAlpha(1.0f);
+        }
+
         holder.itemView.setOnClickListener(v -> {
             String chapterId = chapter.getId();
 
@@ -81,7 +104,8 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ViewHold
 
             Intent intent = new Intent(context, ReaderActivity.class);
             intent.putExtra("CHAPTER_ID", chapterId);
-            intent.putExtra("CHAPTER_TITLE", chapterTitle.toString()); // Передаем название
+            intent.putExtra("CHAPTER_TITLE", chapterTitle.toString());
+            intent.putExtra("MANGA_ID", mangaId);
             context.startActivity(intent);
         });
     }

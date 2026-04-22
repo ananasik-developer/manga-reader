@@ -28,6 +28,15 @@ public class ChaptersActivity extends AppCompatActivity {
     private String mangaTitle;
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Обновляем список при возврате из читалки
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chapters);
@@ -43,7 +52,8 @@ public class ChaptersActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new ChapterAdapter(this, new ArrayList<>());
-        adapter.setMangaTitle(mangaTitle); // Передаем название манги в адаптер
+        adapter.setMangaTitle(mangaTitle);
+        adapter.setMangaId(mangaId);// Передаем название манги в адаптер
         recyclerView.setAdapter(adapter);
 
         loadChapters();

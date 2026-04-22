@@ -4,12 +4,12 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.example.manga_reader.R;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ReaderPagerAdapter extends RecyclerView.Adapter<ReaderPagerAdapter.PageViewHolder> {
@@ -19,11 +19,11 @@ public class ReaderPagerAdapter extends RecyclerView.Adapter<ReaderPagerAdapter.
 
     public ReaderPagerAdapter(Context context, List<String> imageUrls) {
         this.context = context;
-        this.imageUrls = imageUrls;
+        this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
     }
 
     public void setImageUrls(List<String> imageUrls) {
-        this.imageUrls = imageUrls;
+        this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -36,8 +36,13 @@ public class ReaderPagerAdapter extends RecyclerView.Adapter<ReaderPagerAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull PageViewHolder holder, int position) {
+        // Очищаем предыдущее изображение
+        holder.photoView.setImageDrawable(null);
+
+        // Загружаем новое
         Glide.with(context)
                 .load(imageUrls.get(position))
+                .placeholder(android.R.color.black)
                 .into(holder.photoView);
     }
 
