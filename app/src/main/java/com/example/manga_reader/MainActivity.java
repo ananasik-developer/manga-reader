@@ -1,13 +1,15 @@
 package com.example.manga_reader;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,6 +21,7 @@ import com.example.manga_reader.R;
 import com.example.manga_reader.data.api.ApiClient;
 import com.example.manga_reader.data.models.MangaListResponse;
 import com.example.manga_reader.data.models.MangaResponse;
+import com.example.manga_reader.ui.LocalLibraryActivity;
 import com.example.manga_reader.ui.MangaAdapter;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -31,91 +34,98 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String PREFS_NAME = "app_prefs";
     private static final String KEY_THEME = "dark_theme";
-    private static final String KEY_LAST_SEARCH = "last_search";
-    private static final String KEY_MANGA_LIST = "manga_list";
-    private static final String KEY_NEED_RESTORE = "need_restore"; // ← НОВЫЙ КЛЮЧ
 
     private boolean isDarkTheme = false;
     private MaterialToolbar toolbar;
     private EditText editTextSearch;
-    private Button buttonSearch;
+    private ImageButton buttonSearch;
+    private ImageButton buttonLocal;
     private RecyclerView recyclerView;
     private ProgressBar progressBarMain;
     private ImageView placeholderImage;
     private MangaAdapter adapter;
     private SharedPreferences prefs;
 
+    private List<MangaResponse> savedMangaList = new ArrayList<>();
+    private String savedSearchQuery = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         isDarkTheme = prefs.getBoolean(KEY_THEME, false);
 
-        if (isDarkTheme) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        if (savedInstanceState != null) {
+            savedSearchQuery = savedInstanceState.getString("search_query", "");
+            String json = savedInstanceState.getString("manga_list", "");
+            if (!json.isEmpty()) {
+                Type type = new TypeToken<List<MangaResponse>>(){}.getType();
+                savedMangaList = new Gson().fromJson(json, type);
+            }
         }
 
+        applyTheme();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         initViews();
-        updateThemeIcon();
 
-        boolean needRestore = prefs.getBoolean(KEY_NEED_RESTORE, false);
-
-        if (needRestore) {
-            String lastSearch = prefs.getString(KEY_LAST_SEARCH, "");
-            if (!lastSearch.isEmpty()) {
-                editTextSearch.setText(lastSearch);
-            }
-            loadSavedMangaList();
-
-            prefs.edit().putBoolean(KEY_NEED_RESTORE, false).apply();
+        if (!savedSearchQuery.isEmpty()) {
+            editTextSearch.setText(savedSearchQuery);
+        }
+        if (savedMangaList != null && !savedMangaList.isEmpty()) {
+            adapter.setMangaList(savedMangaList);
+            recyclerView.setVisibility(View.VISIBLE);
+            placeholderImage.setVisibility(View.GONE);
         } else {
-            editTextSearch.setText("");
             recyclerView.setVisibility(View.GONE);
             placeholderImage.setVisibility(View.VISIBLE);
-
-            prefs.edit().remove(KEY_LAST_SEARCH).apply();
-            prefs.edit().remove(KEY_MANGA_LIST).apply();
         }
 
         toolbar.setNavigationOnClickListener(v -> {
-            String currentSearch = editTextSearch.getText().toString().trim();
-            prefs.edit().putString(KEY_LAST_SEARCH, currentSearch).apply();
-
+            savedSearchQuery = editTextSearch.getText().toString().trim();
             if (adapter != null && adapter.getItemCount() > 0) {
-                saveMangaList(adapter.getMangaList());
+                savedMangaList = adapter.getMangaList();
             }
-
-            prefs.edit().putBoolean(KEY_NEED_RESTORE, true).apply();
 
             isDarkTheme = !isDarkTheme;
             prefs.edit().putBoolean(KEY_THEME, isDarkTheme).apply();
-
+            applyTheme();
             recreate();
         });
 
         buttonSearch.setOnClickListener(v -> {
             String query = editTextSearch.getText().toString().trim();
             if (!query.isEmpty()) {
-                prefs.edit().putString(KEY_LAST_SEARCH, query).apply();
+                savedSearchQuery = query;
                 searchManga(query);
             } else {
                 Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show();
-                recyclerView.setVisibility(View.GONE);
-                placeholderImage.setVisibility(View.VISIBLE);
-                prefs.edit().remove(KEY_LAST_SEARCH).apply();
-                prefs.edit().remove(KEY_MANGA_LIST).apply();
             }
         });
+
+        buttonLocal.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(MainActivity.this, LocalLibraryActivity.class));
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Ошибка открытия библиотеки", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void applyTheme() {
+        if (isDarkTheme) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
     }
 
     private void initViews() {
         toolbar = findViewById(R.id.topAppBar);
         editTextSearch = findViewById(R.id.editTextSearch);
         buttonSearch = findViewById(R.id.buttonSearch);
+        buttonLocal = findViewById(R.id.buttonLocal);
         recyclerView = findViewById(R.id.recyclerViewManga);
         progressBarMain = findViewById(R.id.progressBarMain);
         placeholderImage = findViewById(R.id.imageViewPlaceholder);
@@ -125,39 +135,23 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
     }
 
-    private void updateThemeIcon() {
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("search_query", editTextSearch.getText().toString().trim());
+        if (adapter != null && adapter.getItemCount() > 0) {
+            String json = new Gson().toJson(adapter.getMangaList());
+            outState.putString("manga_list", json);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         if (isDarkTheme) {
-            toolbar.setNavigationIcon(R.drawable.ic_theme_dark_24);
+            toolbar.setNavigationIcon(R.drawable.ic_theme_light);
         } else {
-            toolbar.setNavigationIcon(R.drawable.ic_theme_24);
-        }
-    }
-
-    private void saveMangaList(List<MangaResponse> list) {
-        if (list != null && !list.isEmpty()) {
-            Gson gson = new Gson();
-            String json = gson.toJson(list);
-            prefs.edit().putString(KEY_MANGA_LIST, json).apply();
-        }
-    }
-
-    private void loadSavedMangaList() {
-        String json = prefs.getString(KEY_MANGA_LIST, null);
-        if (json != null) {
-            Gson gson = new Gson();
-            Type type = new TypeToken<List<MangaResponse>>(){}.getType();
-            List<MangaResponse> savedList = gson.fromJson(json, type);
-            if (savedList != null && !savedList.isEmpty()) {
-                adapter.setMangaList(savedList);
-                recyclerView.setVisibility(View.VISIBLE);
-                placeholderImage.setVisibility(View.GONE);
-            } else {
-                recyclerView.setVisibility(View.GONE);
-                placeholderImage.setVisibility(View.VISIBLE);
-            }
-        } else {
-            recyclerView.setVisibility(View.GONE);
-            placeholderImage.setVisibility(View.VISIBLE);
+            toolbar.setNavigationIcon(R.drawable.ic_theme_dark);
         }
     }
 
@@ -175,23 +169,17 @@ public class MainActivity extends AppCompatActivity {
                     List<MangaResponse> mangaList = response.body().getData();
                     if (mangaList != null && !mangaList.isEmpty()) {
                         adapter.setMangaList(mangaList);
-                        saveMangaList(mangaList);
+                        savedMangaList = mangaList;
                         recyclerView.setVisibility(View.VISIBLE);
                         placeholderImage.setVisibility(View.GONE);
-                        Toast.makeText(MainActivity.this,
-                                "Найдено: " + mangaList.size(),
-                                Toast.LENGTH_SHORT).show();
                     } else {
                         recyclerView.setVisibility(View.GONE);
                         placeholderImage.setVisibility(View.VISIBLE);
-                        Toast.makeText(MainActivity.this,
-                                "Ничего не найдено", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Ничего не найдено", Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     recyclerView.setVisibility(View.GONE);
                     placeholderImage.setVisibility(View.VISIBLE);
-                    Toast.makeText(MainActivity.this,
-                            "Ошибка: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -200,8 +188,7 @@ public class MainActivity extends AppCompatActivity {
                 progressBarMain.setVisibility(View.GONE);
                 recyclerView.setVisibility(View.GONE);
                 placeholderImage.setVisibility(View.VISIBLE);
-                Toast.makeText(MainActivity.this,
-                        "Ошибка сети", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Ошибка сети", Toast.LENGTH_SHORT).show();
             }
         });
     }

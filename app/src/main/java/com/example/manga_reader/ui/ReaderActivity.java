@@ -25,6 +25,7 @@ import com.example.manga_reader.data.api.MangaDexService;
 import com.example.manga_reader.data.models.ChapterListResponse;
 import com.example.manga_reader.data.models.ChapterPagesResponse;
 import com.example.manga_reader.data.models.ChapterResponse;
+import com.example.manga_reader.utils.ZipHelper;
 import com.google.android.material.card.MaterialCardView;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -33,9 +34,14 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ReaderActivity extends AppCompatActivity {
+    private boolean isLocalMode = false;
+    private String localMangaPath = null;
 
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private ViewPager2 viewPager;
     private RecyclerView recyclerView;
     private ReaderPagerAdapter pagerAdapter;
@@ -72,6 +78,13 @@ public class ReaderActivity extends AppCompatActivity {
         chapterTitle = getIntent().getStringExtra("CHAPTER_TITLE");
         mangaId = getIntent().getStringExtra("MANGA_ID");
         if (chapterTitle == null) chapterTitle = "Глава";
+
+        isLocalMode = getIntent().getBooleanExtra("IS_LOCAL", false);
+        if (isLocalMode) {
+            localMangaPath = getIntent().getStringExtra("LOCAL_MANGA_PATH");
+            chapterTitle = getIntent().getStringExtra("LOCAL_MANGA_TITLE");
+            if (chapterTitle == null) chapterTitle = "Манга";
+        }
 
         initViews();
         setupViews();
@@ -384,6 +397,12 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void loadPages() {
+        if (isLocalMode) {
+            loadLocalPages();
+            return;
+        }
+
+        // Существующий код загрузки из API
         ApiClient.getService().getChapterPages(chapterId).enqueue(new Callback<ChapterPagesResponse>() {
             @Override
             public void onResponse(Call<ChapterPagesResponse> c, Response<ChapterPagesResponse> r) {
@@ -411,5 +430,33 @@ public class ReaderActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ChapterPagesResponse> c, Throwable t) {}
         });
+    }
+
+    private void loadLocalPages() {
+        if (localMangaPath == null) return;
+
+        executor.execute(() -> {
+            List<String> images = ZipHelper.getImagesFromFolder(localMangaPath);
+            fullUrls.clear();
+            fullUrls.addAll(images);
+
+            runOnUiThread(() -> {
+                pagerAdapter.setImageUrls(new ArrayList<>(fullUrls));
+                verticalAdapter.setImageUrls(new ArrayList<>(fullUrls));
+                updatePageIndicator(0);
+
+                if (fullUrls.size() == 1) {
+                    checkIfLastPage(0);
+                }
+            });
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (executor != null) {
+            executor.shutdown();
+        }
     }
 }
